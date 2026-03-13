@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+    <title>ObstacleAI - Real-Time Obstacle Detection</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div class="bg-gradient-animation"></div>
+    <div class="grid-overlay"></div>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo"><span class="logo-icon">👁️</span><span
+                    class="logo-text">Obstacle<span class="text-gradient">AI</span></span></a>
+            <div class="nav-links"><a href="#features" class="nav-link">Features</a><a href="#how" class="nav-link">How
+                    It Works</a><a href="profile.html" class="nav-link">Profile</a><a href="login.html"
+                    class="nav-link">Login</a><a href="signup.html" class="btn btn-primary btn-sm">Get Started</a></div>
+            <button class="nav-toggle" id="navToggle" aria-label="Menu"><span></span><span></span><span></span></button>
+        </div>
+        <div class="mobile-menu" id="mobileMenu"><a href="#features" class="mobile-link">Features</a><a href="#how"
+                class="mobile-link">How It Works</a><a href="login.html" class="mobile-link">Login</a><a
+                href="signup.html" class="mobile-link btn btn-primary">Get Started</a></div>
+    </nav>
+    <section class="hero">
+        <div class="container">
+            <div class="hero-badge"><span class="badge-dot"></span>AI-Powered &bull; Browser-Based &bull; No Install
+            </div>
+            <h1 class="hero-title">See What's<br><span class="text-gradient-large">Ahead.</span></h1>
+            <div class="hero-actions"><a href="detect.html" class="btn btn-primary btn-lg"><span>Start
+                        Detecting</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <path d="M5 12h14M12 5l7 7-7 7" />
+                    </svg></a><a href="#how" class="btn btn-ghost btn-lg">Learn More</a></div>
+        </div>
+    </section>
+    <section class="features" id="features">
+        <div class="container">
+            <div class="section-header"><span class="section-tag">Features</span>
+                <h2 class="section-title">Everything You Need,<br><span class="text-gradient">Nothing You Don't.</span>
+                </h2>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card feature-card-large">
+                    <div class="feature-icon">🎯</div>
+                    <h3>Real-Time Detection</h3>
+                    <p>TensorFlow.js + COCO-SSD runs directly on your device. Detect people, vehicles, furniture, and
+                        80+ object categories in real time.</p>
+                    <div class="feature-tag">Core Feature</div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔊</div>
+                    <h3>Voice Alerts</h3>
+                    <p>Smart text-to-speech tells you what's detected and where. Hands-free navigation.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📱</div>
+                    <h3>Works Everywhere</h3>
+                    <p>Android Chrome, iOS Safari, desktop - any modern browser with a camera.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🧠</div>
+                    <h3>AI-Powered NLP</h3>
+                    <p>OpenAI integration provides natural language scene descriptions beyond basic detection.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🚨</div>
+                    <h3>Emergency Alerts</h3>
+                    <p>Twilio-powered SMS and call alerts to emergency contacts when obstacles detected.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔒</div>
+                    <h3>Privacy First</h3>
+                    <p>All detection runs on-device. Your camera feed never leaves your phone.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    <section class="how-it-works" id="how">
+        <div class="container">
+            <div class="section-header"><span class="section-tag">How It Works</span>
+                <h2 class="section-title">Three Steps to<br><span class="text-gradient">Safer Navigation</span></h2>
+            </div>
+            <div class="steps-grid">
+                <div class="step-card">
+                    <div class="step-number">01</div>
+                    <h3>Open Camera</h3>
+                    <p>Grant camera permission and point your phone ahead.</p>
+                </div>
+                <div class="step-connector"><svg width="40" height="40" viewBox="0 0 24 24" fill="none"
+                        stroke="var(--purple)" stroke-width="2">
+                        <path d="M5 12h14M12 5l7 7-7 7" />
+                    </svg></div>
+                <div class="step-card">
+                    <div class="step-number">02</div>
+                    <h3>AI Detects</h3>
+                    <p>Our AI model identifies obstacles, people, vehicles in real-time.</p>
+                </div>
+                <div class="step-connector"><svg width="40" height="40" viewBox="0 0 24 24" fill="none"
+                        stroke="var(--purple)" stroke-width="2">
+                        <path d="M5 12h14M12 5l7 7-7 7" />
+                    </svg></div>
+                <div class="step-card">
+                    <div class="step-number">03</div>
+                    <h3>Get Alerted</h3>
+                    <p>Receive voice alerts, visual indicators, and SMS notifications.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    <section class="cta-section">
+        <div class="container">
+            <div class="cta-card">
+                <h2>Ready to See What's Ahead? 👁️</h2>
+                <p>Start using AI-powered obstacle detection right now.</p><a href="detect.html"
+                    class="btn btn-primary btn-lg">Launch Detection &rarr;</a>
+            </div>
+        </div>
+    </section>
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand"><span class="logo-icon">👁️</span><span class="logo-text">Obstacle<span
+                            class="text-gradient">AI</span></span>
+                    <p class="footer-tagline">AI-powered obstacle detection for everyone.</p>
+                </div>
+                <div class="footer-links"><a href="detect.html">Detection</a><a href="#features">Features</a><a
+                        href="login.html">Login</a><a href="signup.html">Sign Up</a></div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 ObstacleAI. Built for accessibility.</p>
+            </div>
+        </div>
+    </footer>
+    <script src="js/auth.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/voice-assistant.js"></script>
+</body>
+
+</html>

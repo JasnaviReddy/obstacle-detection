@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+    <title>ObstacleAI - Profile</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .profile-container {
+            max-width: 600px;
+            margin: 100px auto;
+            padding: 20px;
+            position: relative;
+            z-index: 1
+        }
+
+        .profile-card {
+            padding: 32px;
+            border-radius: 20px;
+            background: rgba(18, 18, 26, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            margin-bottom: 20px
+        }
+
+        .profile-card h2 {
+            font-size: 1.4rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px
+        }
+
+        .contact-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px
+        }
+
+        .contact-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.06)
+        }
+
+        .contact-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px
+        }
+
+        .contact-name {
+            font-weight: 600;
+            font-size: .9rem
+        }
+
+        .contact-phone {
+            font-size: .8rem;
+            color: #94a3b8;
+            font-family: 'JetBrains Mono', monospace
+        }
+
+        .contact-remove {
+            padding: 6px 12px;
+            border-radius: 8px;
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            font-size: .75rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid rgba(239, 68, 68, 0.2)
+        }
+
+        .contact-remove:hover {
+            background: rgba(239, 68, 68, 0.2)
+        }
+
+        .add-form {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap
+        }
+
+        .add-form input {
+            flex: 1;
+            min-width: 140px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #f1f5f9;
+            font-size: .9rem;
+            outline: none;
+            font-family: inherit
+        }
+
+        .add-form input:focus {
+            border-color: #7c3aed;
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.3)
+        }
+
+        .add-form input::placeholder {
+            color: #64748b
+        }
+
+        .empty-msg {
+            text-align: center;
+            padding: 30px;
+            color: #64748b;
+            font-size: .9rem
+        }
+
+        .voice-guide {
+            padding: 20px;
+            border-radius: 16px;
+            background: rgba(124, 58, 237, 0.05);
+            border: 1px solid rgba(124, 58, 237, 0.15);
+            margin-top: 16px
+        }
+
+        .voice-guide h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: #a78bfa
+        }
+
+        .voice-guide p,
+        .voice-guide li {
+            font-size: .85rem;
+            color: #94a3b8;
+            line-height: 1.6
+        }
+
+        .voice-guide ul {
+            list-style: none;
+            padding: 0;
+            margin-top: 8px
+        }
+
+        .voice-guide li::before {
+            content: "\2022 ";
+            color: #7c3aed;
+            font-weight: bold
+        }
+
+        .lang-badges {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px
+        }
+
+        .lang-badge {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: .75rem;
+            font-weight: 600;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.04)
+        }
+
+        .lang-badge.active {
+            background: rgba(124, 58, 237, 0.15);
+            border-color: rgba(124, 58, 237, 0.3);
+            color: #a78bfa
+        }
+    </style>
+</head>
+
+<body class="auth-page">
+    <div class="bg-gradient-animation"></div>
+    <div class="grid-overlay"></div>
+    <div class="profile-container">
+        <a href="index.html" class="auth-back"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2">
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+            </svg> Back to Home</a>
+        <div class="profile-card">
+            <h2>\U0001F6A8 Emergency Contacts</h2>
+            <p style="color:#94a3b8;font-size:.85rem;margin-bottom:20px">Contacts who get SMS when you say <strong
+                    style="color:#ef4444">"help"</strong> during detection.</p>
+            <div class="contact-list" id="contactList">
+                <div class="empty-msg" id="emptyMsg">No emergency contacts added yet.</div>
+            </div>
+            <div class="add-form"><input type="text" id="cName" placeholder="Contact name" /><input type="tel"
+                    id="cPhone" placeholder="+91 98765 43210" /><button class="btn btn-primary btn-sm"
+                    id="addBtn">Add</button></div>
+        </div>
+        <div class="profile-card">
+            <h2>\U0001F399\uFE0F Voice Assistant Guide</h2>
+            <div class="voice-guide">
+                <h3>How to Use</h3>
+                <p>The assistant is always listening. Just speak:</p>
+                <ul>
+                    <li><strong>"help"</strong> / <strong>"madad"</strong> / <strong>"sahayam"</strong> \u2192 Emergency
+                        alert</li>
+                    <li><strong>"start camera"</strong> / <strong>"camera chalu"</strong> \u2192 Start detection</li>
+                    <li><strong>"stop camera"</strong> / <strong>"camera band"</strong> \u2192 Stop detection</li>
+                    <li><strong>"flip camera"</strong> / <strong>"camera badlo"</strong> \u2192 Switch camera</li>
+                    <li><strong>"sound on/off"</strong> / <strong>"awaaz chalu/band"</strong> \u2192 Toggle voice</li>
+                    <li><strong>"go to home"</strong> / <strong>"ghar jao"</strong> \u2192 Navigate home</li>
+                    <li><strong>"go to detection"</strong> / <strong>"detection jao"</strong> \u2192 Open camera</li>
+                    <li><strong>"switch to Hindi/Telugu"</strong> \u2192 Change language</li>
+                </ul>
+            </div>
+            <div style="margin-top:16px">
+                <h3 style="font-size:.9rem;font-weight:700;margin-bottom:8px">Supported Languages</h3>
+                <div class="lang-badges"><span class="lang-badge active">English</span><span
+                        class="lang-badge">\u0939\u093F\u0902\u0926\u0940 Hindi</span><span
+                        class="lang-badge">\u0C24\u0C46\u0C32\u0C41\u0C17\u0C41 Telugu</span></div>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            renderContacts();
+            document.getElementById('addBtn').addEventListener('click', () => {
+                const n = document.getElementById('cName').value.trim(),
+                    p = document.getElementById('cPhone').value.trim();
+                if (!n || !p) { alert('Enter both name and phone'); return }
+                const c = JSON.parse(localStorage.getItem('obstacleai_emergency_contacts') || '[]');
+                c.push({ name: n, phone: p, id: Date.now() });
+                localStorage.setItem('obstacleai_emergency_contacts', JSON.stringify(c));
+                document.getElementById('cName').value = '';
+                document.getElementById('cPhone').value = '';
+                renderContacts();
+            });
+        });
+
+        function renderContacts() {
+            const c = JSON.parse(localStorage.getItem('obstacleai_emergency_contacts') || '[]'),
+                l = document.getElementById('contactList'),
+                e = document.getElementById('emptyMsg');
+            l.querySelectorAll('.contact-item').forEach(el => el.remove());
+            if (c.length === 0) { e.style.display = 'block'; return }
+            e.style.display = 'none';
+            c.forEach(ct => {
+                const d = document.createElement('div');
+                d.className = 'contact-item';
+                d.innerHTML = '<div class="contact-info"><span class="contact-name">' + ct.name + '</span><span class="contact-phone">' + ct.phone + '</span></div><button class="contact-remove" data-id="' + ct.id + '">Remove</button>';
+                d.querySelector('.contact-remove').addEventListener('click', () => {
+                    let cs = JSON.parse(localStorage.getItem('obstacleai_emergency_contacts') || '[]');
+                    cs = cs.filter(x => x.id !== ct.id);
+                    localStorage.setItem('obstacleai_emergency_contacts', JSON.stringify(cs));
+                    renderContacts();
+                });
+                l.appendChild(d);
+            });
+        }
+    </script>
+    <script src="js/auth.js"></script>
+    <script src="js/voice-assistant.js"></script>
+</body>
+
+</html>

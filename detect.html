@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+    <title>ObstacleAI - Live Detection</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
+</head>
+
+<body class="detect-page">
+    <header class="detect-header">
+        <a href="index.html" class="detect-back" aria-label="Back">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+            </svg>
+        </a>
+        <div class="detect-status" id="statusIndicator">
+            <span class="status-dot"></span>
+            <span class="status-text">Initializing...</span>
+        </div>
+        <div class="detect-stats">
+            <span class="stat-pill" id="fpsStat">0 FPS</span>
+            <span class="stat-pill" id="objectsStat">0 obj</span>
+        </div>
+    </header>
+
+    <div class="camera-container" id="cameraContainer">
+        <video id="videoFeed" autoplay playsinline muted></video>
+        <canvas id="detectionCanvas"></canvas>
+
+        <div class="camera-overlay" id="loadingOverlay">
+            <div class="loader-container">
+                <div class="loader-ring"></div>
+                <p class="loader-text" id="loaderText">Loading AI Model...</p>
+                <div class="loader-progress">
+                    <div class="loader-bar" id="loaderBar"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="camera-overlay hidden" id="permissionOverlay">
+            <div class="permission-card">
+                <div class="permission-icon">📸</div>
+                <h3>Camera Access Required</h3>
+                <p>We need camera permission to detect obstacles. Your feed stays on your device.</p>
+                <button class="btn btn-primary" id="requestCameraBtn">Allow Camera</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="detection-panel" id="detectionPanel">
+        <div class="panel-handle" id="panelHandle">
+            <div class="handle-bar"></div>
+        </div>
+        <div class="panel-header">
+            <h3>🔍 Detection Log</h3>
+            <button class="btn btn-ghost btn-xs" id="clearLogBtn">Clear</button>
+        </div>
+        <div class="detection-log" id="detectionLog">
+            <div class="log-empty">
+                <p>No objects detected yet. Point your camera to begin.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="detect-controls">
+        <button class="control-btn" id="switchCameraBtn" aria-label="Flip">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 7h-4l-2-3H10L8 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z" />
+                <circle cx="12" cy="13" r="3" />
+            </svg>
+            <span>Flip</span>
+        </button>
+
+        <button class="control-btn control-main" id="toggleDetectionBtn" aria-label="Start">
+            <div class="control-main-inner">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+                    <polygon points="5 3 19 12 5 21 5 3" />
+                </svg>
+            </div>
+            <span>Start</span>
+        </button>
+
+        <button class="control-btn active" id="toggleSoundBtn" aria-label="Sound">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
+            </svg>
+            <span>Sound</span>
+        </button>
+
+        <button class="control-btn" id="alertBtn" aria-label="Alert">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path
+                    d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+            </svg>
+            <span>Alert</span>
+        </button>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/detector.js"></script>
+    <script src="js/voice-assistant.js"></script>
+</body>
+
+</html>
