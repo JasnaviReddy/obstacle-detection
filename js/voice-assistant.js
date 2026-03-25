@@ -269,8 +269,6 @@ class VoiceAssistant {
         }
         const r = this.responses[this.activeLang];
         this.updateFeedback('"' + t + '"');
-        const c = t.replace(/\s+/g, ' ').trim();
-        const m = this.matchCmd(c);
 
         switch (m) {
             case 'help':
