@@ -142,9 +142,18 @@ app.post('/api/alert', async (req, res) => {
         }
         const to = phone || '';
         if (!to) return res.status(400).json({ message: 'No phone number provided' });
-        // Fast2SMS requires 10-digit Indian number (strip +91 or leading 0)
-        const cleaned = to.replace(/^\+91/, '').replace(/^0/, '').replace(/\D/g, '');
-        if (cleaned.length !== 10) return res.status(400).json({ message: 'Invalid Indian phone number: ' + to });
+        // Fast2SMS requires 10-digit Indian number. Let's make the cleaning more robust:
+        // 1. Remove all non-digits
+        // 2. If it starts with 91 and has 12 digits, remove the 91
+        // 3. If it starts with 0 and has 11 digits, remove the 0
+        let cleaned = to.replace(/\D/g, '');
+        if (cleaned.length === 12 && cleaned.startsWith('91')) cleaned = cleaned.substring(2);
+        if (cleaned.length === 11 && cleaned.startsWith('0')) cleaned = cleaned.substring(1);
+
+        if (cleaned.length !== 10) {
+            console.error('[Alert] Invalid number format after cleaning:', to, '->', cleaned);
+            return res.status(400).json({ message: 'Invalid Indian phone number: ' + to });
+        }
         const smsBody = message || '[ObstacleAI Alert] ' + detectedObjects + ' detected near ' + (userEmail || 'user') + '. Please check on them immediately.';
         const response = await fetch('https://www.fast2sms.com/dev/bulkV2', {
             method: 'POST',

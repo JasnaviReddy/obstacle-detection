@@ -317,17 +317,28 @@ class VoiceAssistant {
         const msg = 'EMERGENCY: ' + (user.name || 'User') + ' needs help! Detected: ' + obj;
         this.flashAlert();
         let sent = 0, failed = 0;
-        const promises = contacts.map(c =>
-            fetch('/api/alert', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userEmail: user.email || 'unknown', phone: c.phone, contactName: c.name, detectedObjects: obj, timestamp: new Date().toISOString(), message: msg })
-            }).then(async res => { const data = await res.json(); if (!res.ok) { failed++; this.showToast('SMS FAILED for ' + c.name, 'error'); } else { sent++; } })
-                .catch(e => { failed++; this.showToast('SMS FAILED for ' + c.name + ' (network)', 'error'); })
-        );
-        Promise.all(promises).then(() => {
-            if (sent > 0) { this.speak(r.alertSent); this.showToast('SMS sent to ' + sent + ' contact(s)!', 'success'); }
-            else { this.speak('Alert failed. Check Fast2SMS setup.'); }
-        });
+
+        // Use sequential sending with a delay to avoid Fast2SMS silent failures
+        (async () => {
+            for (const c of contacts) {
+                try {
+                    const res = await fetch('/api/alert', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ userEmail: user.email || 'unknown', phone: c.phone, contactName: c.name, detectedObjects: obj, timestamp: new Date().toISOString(), message: msg })
+                    });
+                    if (res.ok) { sent++; } else { failed++; }
+                } catch (e) { failed++; }
+                // 1.5 second delay between multiple alerts
+                if (contacts.length > 1) await new Promise(r => setTimeout(r, 1500));
+            }
+
+            if (sent > 0) {
+                this.speak(this.responses[this.activeLang].alertSent);
+                this.showToast('SMS sent to ' + sent + ' contact(s)!', 'success');
+            } else {
+                this.speak('Alert failed. Check Fast2SMS setup.');
+            }
+        })();
     }
 
     flashAlert() {
