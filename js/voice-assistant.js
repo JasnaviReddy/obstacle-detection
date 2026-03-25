@@ -212,29 +212,26 @@ class VoiceAssistant {
         this.recognition.lang = this.languages[this.activeLang].code;
         this.recognition.maxAlternatives = 5;
         this.recognition.onstart = () => { console.log('[Voice] Recognition started in', this.recognition.lang); this.updateFeedback(this.responses[this.activeLang].listening); };
-        this.recognition.onresult = (e) => {
-            if (window._ttsActive || this.isSpeaking || window.speechSynthesis.speaking) { console.log('[Voice] Ignoring - TTS active'); return; }
-            let best = '';
-            for (let i = e.resultIndex; i < e.results.length; i++) {
-                if (e.results[i].isFinal) {
-                    for (let j = 0; j < e.results[i].length; j++) {
-                        const a = e.results[i][j].transcript.trim().toLowerCase();
-                        if (a.length > best.length) best = a;
-                    }
-                }
-            }
             if (!best) return;
             // Always allow emergency commands regardless of timing or buffers
             const isEmergency = this.matchCmd(best) === 'help' || this.matchCmd(best) === 'sendAlert';
+            
+            // If the app is speaking, we usually ignore sounds to avoid self-echo.
+            // BUT we should NEVER ignore "Help" or "Emergency".
+            if (!isEmergency && (window._ttsActive || this.isSpeaking || window.speechSynthesis.speaking)) { 
+                console.log('[Voice] Ignoring - TTS active (non-emergency)'); 
+                return; 
+            }
+
             if (isEmergency) {
                 console.log('[Voice] EMERGENCY detected:', best);
                 this.processCommand(best);
                 return;
             }
-            if (Date.now() - this.lastSpeakTime < 1500) { console.log('[Voice] Ignoring - echo buffer (non-emergency)'); return; }
+            
+            if (Date.now() - this.lastSpeakTime < 1000) { console.log('[Voice] Ignoring - echo buffer (non-emergency)'); return; }
             console.log('[Voice] Processing:', best);
             this.processCommand(best);
-        };
         this.recognition.onend = () => {
             if (this.isListening) { setTimeout(() => { if (this.isListening && !window._ttsActive && !window.speechSynthesis.speaking) { try { this.recognition.start(); } catch (e) { } } }, 500); }
         };
@@ -392,7 +389,7 @@ class VoiceAssistant {
         if (!('speechSynthesis' in window)) { if (callback) callback(); return; }
         window.speechSynthesis.cancel();
         this.isSpeaking = true; window._ttsActive = true; window.voiceAssistantActive = false;
-        if (this.recognition) { try { this.recognition.abort(); } catch (e) { } }
+        // removed recognition.abort() to keep mic alive for emergency commands
 
         const u = new SpeechSynthesisUtterance(text);
         this.utterances.push(u); if (this.utterances.length > 5) this.utterances.shift();
