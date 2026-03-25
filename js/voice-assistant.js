@@ -224,7 +224,8 @@ class VoiceAssistant {
                 }
             }
             if (!best) return;
-            const isEmergency = this.matchCmd(best) === 'help';
+            const m = this.matchCmd(best);
+            const isEmergency = m === 'help' || m === 'sendAlert';
             if (!isEmergency && (Date.now() - this.lastSpeakTime < 4000)) { console.log('[Voice] Ignoring - echo buffer'); return; }
             console.log('[Voice] Processing:', best);
             this.processCommand(best);
@@ -254,13 +255,16 @@ class VoiceAssistant {
     }
 
     processCommand(t) {
-        if (!window.voiceAssistantActive) return;
-        if (this.isProcessing) return;
-        this.isProcessing = true;
-        const r = this.responses[this.activeLang];
-        this.updateFeedback('"' + t + '"');
         const c = t.replace(/\s+/g, ' ').trim();
         const m = this.matchCmd(c);
+        const isEmergency = m === 'help' || m === 'sendAlert';
+
+        if (!isEmergency && !window.voiceAssistantActive) return;
+        if (this.isProcessing) return;
+        this.isProcessing = true;
+
+        const r = this.responses[this.activeLang];
+        this.updateFeedback('"' + t + '"');
 
         switch (m) {
             case 'help':
