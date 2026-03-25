@@ -58,19 +58,25 @@ const Auth = {
         </div>
       </div>`;
 
-        /* Inject into navbar (index.html) */
-        const navLinks = document.querySelector('.nav-links');
-        if (navLinks) {
-            /* Hide login/get-started links for logged-in users */
-            navLinks.querySelectorAll('a').forEach(a => {
-                if (a.href && (a.href.includes('login.html') || a.href.includes('signup.html')))
-                    a.style.display = 'none';
-            });
-            /* Remove existing avatar if re-rendering */
-            const old = navLinks.querySelector('.user-avatar-wrapper');
-            if (old) old.remove();
-            navLinks.insertAdjacentHTML('beforeend', avatarHTML);
-        }
+        /* Inject into navbar and mobile menu */
+        const containers = [
+            document.querySelector('.nav-links'),
+            document.querySelector('#mobileMenu')
+        ];
+
+        containers.forEach(container => {
+            if (container) {
+                /* Hide login/get-started links for logged-in users */
+                container.querySelectorAll('a').forEach(a => {
+                    if (a.href && (a.href.includes('login.html') || a.href.includes('signup.html')))
+                        a.style.display = 'none';
+                });
+                /* Remove existing avatar if re-rendering */
+                const old = container.querySelector('.user-avatar-wrapper');
+                if (old) old.remove();
+                container.insertAdjacentHTML('beforeend', avatarHTML);
+            }
+        });
 
         /* Inject into detect header (detect.html) */
         const detectHeader = document.querySelector('.detect-header');

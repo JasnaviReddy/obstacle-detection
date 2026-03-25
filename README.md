@@ -38,7 +38,7 @@ npx serve .
 
 Then open `http://localhost:8080` on your phone or desktop.
 
-## Backend Setup (Auth + OpenAI + Twilio)
+## Backend Setup (Auth + OpenAI + Fast2SMS)
 
 ```bash
 cd server
@@ -54,11 +54,12 @@ npm run dev             # Start with auto-reload
 2. Add to `.env`: `OPENAI_API_KEY=sk-...`
 3. Endpoint: `POST /api/describe-scene`
 
-### Twilio (SMS & Call Alerts)
-1. Sign up at https://twilio.com
-2. Get Account SID, Auth Token, Phone Number
-3. Add to `.env` (see .env.example)
-4. Endpoint: `POST /api/alert`
+### Fast2SMS (SMS Alerts)
+1. Sign up at https://www.fast2sms.com
+2. Add wallet balance (minimum 100 INR required for API access)
+3. Get your API Key from the Dev API section
+4. Add to `.env`: `FAST2SMS_API_KEY=...`
+5. Endpoint: `POST /api/alert`
 
 ### Google OAuth
 1. Create OAuth credentials at https://console.cloud.google.com
@@ -79,8 +80,8 @@ Replace in-memory user store with Firebase Admin SDK for production use.
 | Login/Signup | JWT + bcrypt | ✅ Working |
 | Offline Auth Fallback | LocalStorage | ✅ Working |
 | Scene Description | OpenAI GPT-3.5 | ⚙️ Needs Key |
-| SMS Alerts | Twilio | ⚙️ Needs Key |
-| Call Alerts | Twilio | ⚙️ Needs Key |
+| SMS Alerts | Fast2SMS | ⚙️ Needs Key |
+| Call Alerts | N/A | |
 | Google OAuth | Passport.js | ⚙️ Needs Setup |
 
 ## Browser Support
