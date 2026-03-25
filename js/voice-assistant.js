@@ -224,8 +224,9 @@ class VoiceAssistant {
                 }
             }
             if (!best) return;
-            const isEmergency = this.matchCmd(best) === 'help';
-            if (!isEmergency && (Date.now() - this.lastSpeakTime < 4000)) { console.log('[Voice] Ignoring - echo buffer'); return; }
+            // Always allow emergency commands regardless of timing
+            const isEmergency = this.matchCmd(best) === 'help' || this.matchCmd(best) === 'sendAlert';
+            if (!isEmergency && (Date.now() - this.lastSpeakTime < 2000)) { console.log('[Voice] Ignoring - echo buffer (non-emergency)'); return; }
             console.log('[Voice] Processing:', best);
             this.processCommand(best);
         };
@@ -403,7 +404,7 @@ class VoiceAssistant {
                     window.voiceAssistantActive = true;
                     try { this.recognition.start(); } catch (e) { }
                 }
-            }, 1200);
+            }, 600); // Reduced delay from 1200ms
         };
         u.onend = done;
         u.onerror = (e) => { console.error('[Voice] Speak Error:', e); done(); };
@@ -467,8 +468,9 @@ class VoiceAssistant {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    const delay = window.location.pathname.includes('detect') ? 500 : 2000;
     setTimeout(() => {
         window.voiceAssistant = new VoiceAssistant();
         window.triggerEmergencyAlert = (obj) => { if (window.voiceAssistant) { window.voiceAssistant.triggerAlert(); } };
-    }, 2000);
+    }, delay);
 });
