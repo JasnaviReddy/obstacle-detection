@@ -110,7 +110,7 @@ class VoiceAssistant {
             soundOn: ['sound on', 'volume on', 'voice on', 'unmute',
                 'awaaz chalu', 'awaz chalu', 'sound chalu',
                 'आवाज़ चालू', 'आवाज चालू',
-                'సౌండ్ ఆన్', 'సౌండ్ చాలూ'],
+                'సౌండ్ ఆన్', 'సౌండ్ चాలూ'],
             soundOff: ['sound off', 'volume off', 'voice off', 'mute',
                 'awaaz band', 'awaz band', 'sound band',
                 'आवाज़ बंद', 'आवाज बंद',
@@ -123,7 +123,7 @@ class VoiceAssistant {
             goDetect: ['go to detection', 'go detection', 'open detection', 'detection page', 'detect',
                 'detection jao', 'camera page', 'detection ki vellandi',
                 'detection kholo', 'camera kholo', 'डिटेक्शन जाओ',
-                'डिटेक्शन खोलो', 'कैమरा खोलो',
+                'डिटेक्शन खोलो', 'कैमरा खोलो',
                 'డిటెక్షన్ తీయండి', 'కెమెరా తీయండి', 'డిటెక్షన్ కి వెళ్ళండి'],
             goLogin: ['go to login', 'login', 'log in', 'sign in',
                 'लॉगिन', 'లాగిన్'],
@@ -140,7 +140,7 @@ class VoiceAssistant {
                 'हिंदी', 'हिन्दी',
                 'హిందీ'],
             langTe: ['switch to telugu', 'telugu', 'telugu mode', 'telugu mein', 'telugu lo',
-                'तेलुగు',
+                'तेलुगु',
                 'తెలుగు'],
             langEn: ['switch to english', 'english', 'english mode', 'english mein', 'angrezi',
                 'अंग्रेज़ी', 'इंग्लिश',
@@ -173,14 +173,9 @@ class VoiceAssistant {
             }
         };
         if ('speechSynthesis' in window) {
-            const loadVoices = () => { 
-                this.voices = window.speechSynthesis.getVoices(); 
-                this.updateSelectedVoices(); 
-            };
+            const loadVoices = () => { this.voices = window.speechSynthesis.getVoices(); this.updateSelectedVoices(); };
             loadVoices();
-            if (window.speechSynthesis.onvoiceschanged !== undefined) { 
-                window.speechSynthesis.onvoiceschanged = loadVoices; 
-            }
+            if (window.speechSynthesis.onvoiceschanged !== undefined) { window.speechSynthesis.onvoiceschanged = loadVoices; }
         }
         try {
             const status = await navigator.permissions.query({ name: 'microphone' });
@@ -236,26 +231,19 @@ class VoiceAssistant {
             }
             if (!best) return;
 
-            // EMERGENCY CHECK: Priority #1
             const m = this.matchCmd(best);
             const isEmergency = m === 'help' || m === 'sendAlert';
 
-            // If speaking, ignore non-emergency sounds
             if (!isEmergency && (window._ttsActive || this.isSpeaking || window.speechSynthesis.speaking)) {
-                console.log('[Voice] Ignoring - TTS active');
                 return;
             }
 
             if (isEmergency) {
-                console.log('[Voice] EMERGENCY detected:', best);
                 this.processCommand(best);
                 return;
             }
 
-            // Normal echo buffer
             if (Date.now() - this.lastSpeakTime < 1000) return;
-            
-            console.log('[Voice] Processing command:', best);
             this.processCommand(best);
         };
 
@@ -270,7 +258,6 @@ class VoiceAssistant {
         };
 
         this.recognition.onerror = (e) => {
-            if (e.error === 'not-allowed') this.updateFeedback('Mic Blocked');
             if (this.isListening) {
                 setTimeout(() => { if (this.isListening) try { this.recognition.start(); } catch (e) { } }, 1000);
             }
@@ -293,11 +280,7 @@ class VoiceAssistant {
     processCommand(t) {
         const c = t.replace(/\s+/g, ' ').trim();
         const m = this.matchCmd(c);
-        
-        // Emergency bypass active check
-        if (m !== 'help' && m !== 'sendAlert' && !window.voiceAssistantActive) {
-            return;
-        }
+        if (m !== 'help' && m !== 'sendAlert' && !window.voiceAssistantActive) return;
 
         const r = this.responses[this.activeLang];
         this.updateFeedback('"' + t + '"');
@@ -355,31 +338,17 @@ class VoiceAssistant {
         const user = JSON.parse(localStorage.getItem('obstacleai_user') || '{}');
         const contacts = JSON.parse(localStorage.getItem('obstacleai_emergency_contacts') || '[]');
         const r = this.responses[this.activeLang];
-        
-        if (contacts.length === 0) {
-            this.speak(r.alertFailed);
-            return;
-        }
-
+        if (contacts.length === 0) { this.speak(r.alertFailed); return; }
         const obj = window.detector?._lastLogObjects || 'obstacles';
         const msg = 'EMERGENCY: ' + (user.name || 'User') + ' needs help! Detected: ' + obj;
-        
         this.flashAlert();
-        
         (async () => {
             let sent = 0;
             for (const c of contacts) {
                 try {
                     const res = await fetch('/api/alert', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
-                            userEmail: user.email || 'unknown', 
-                            phone: c.phone, 
-                            contactName: c.name, 
-                            detectedObjects: obj, 
-                            message: msg 
-                        })
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ userEmail: user.email || 'unknown', phone: c.phone, contactName: c.name, detectedObjects: obj, message: msg })
                     });
                     if (res.ok) sent++;
                 } catch (e) { }
@@ -388,9 +357,7 @@ class VoiceAssistant {
             if (sent > 0) {
                 this.speak(this.responses[this.activeLang].alertSent);
                 this.showToast('SMS sent to ' + sent + ' contacts!', 'success');
-            } else {
-                this.speak('Alert failed to send.');
-            }
+            } else { this.speak('Alert failed to send.'); }
         })();
     }
 
@@ -418,6 +385,7 @@ class VoiceAssistant {
             if (this.isListening) setTimeout(() => { try { this.recognition.start(); } catch (e) { } }, 500);
         }
         this.speak(this.responses[lang].langSwitch + li.name);
+        if (this.langBtn) this.langBtn.textContent = lang.toUpperCase();
     }
 
     updateSelectedVoices() {
@@ -438,21 +406,15 @@ class VoiceAssistant {
     speak(text, callback) {
         if (!('speechSynthesis' in window)) { if (callback) callback(); return; }
         window.speechSynthesis.cancel();
-        
-        this.isSpeaking = true;
-        window._ttsActive = true;
-        window.voiceAssistantActive = false;
-
+        this.isSpeaking = true; window._ttsActive = true; window.voiceAssistantActive = false;
         const u = new SpeechSynthesisUtterance(text);
         u.lang = this.currentLang;
         if (this.selectedVoices[this.currentLang]) u.voice = this.selectedVoices[this.currentLang];
         u.rate = 1.0;
-        
         let handled = false;
         const done = () => {
             if (handled) return; handled = true;
-            this.isSpeaking = false;
-            this.lastSpeakTime = Date.now();
+            this.isSpeaking = false; this.lastSpeakTime = Date.now();
             if (callback) { callback(); return; }
             setTimeout(() => {
                 window._ttsActive = false;
@@ -462,7 +424,6 @@ class VoiceAssistant {
                 }
             }, 600);
         };
-
         u.onend = done;
         u.onerror = (e) => { console.error('[Voice] Error:', e); done(); };
         window.speechSynthesis.speak(u);
@@ -475,53 +436,100 @@ class VoiceAssistant {
     }
 
     startListening() {
-        this.isListening = true;
-        localStorage.setItem('obstacleai_listening', 'true');
+        this.isListening = true; localStorage.setItem('obstacleai_listening', 'true');
         window.voiceAssistantActive = true;
         if (this.recognition) try { this.recognition.start(); } catch (e) { }
         this.updateFeedback(this.responses[this.activeLang].listening);
+        if (this.micBtn) this.micBtn.className = 'va-listening';
     }
 
     stopListening() {
-        this.isListening = false;
-        localStorage.setItem('obstacleai_listening', 'false');
+        this.isListening = false; localStorage.setItem('obstacleai_listening', 'false');
         window.voiceAssistantActive = false;
         if (this.recognition) try { this.recognition.stop(); } catch (e) { }
+        if (this.micBtn) this.micBtn.className = 'va-paused';
+        this.updateFeedback('Paused. Tap mic to resume.');
     }
 
-    toggleListening() {
-        if (this.isListening) this.stopListening();
-        else this.startListening();
-    }
+    toggleListening() { if (this.isListening) this.stopListening(); else this.startListening(); }
 
     showToast(msg, type = 'info') {
         let c = document.querySelector('.toast-container');
         if (!c) {
-            c = document.createElement('div');
-            c.className = 'toast-container';
+            c = document.createElement('div'); c.className = 'toast-container';
             c.style.cssText = 'position:fixed;top:20px;right:20px;z-index:99999;display:flex;flex-direction:column;gap:8px';
             document.body.appendChild(c);
         }
         const t = document.createElement('div');
         t.style.cssText = 'padding:12px 20px;border-radius:12px;background:rgba(18,18,26,0.95);color:#fff;font-size:.85rem;backdrop-filter:blur(10px)';
-        t.textContent = msg;
-        c.appendChild(t);
+        t.textContent = msg; c.appendChild(t);
         setTimeout(() => t.remove(), 4000);
     }
 
     createUI() {
         const dp = document.body.classList.contains('detect-page');
-        const btn = document.createElement('button');
-        btn.id = 'voiceAssistantBtn';
-        btn.style.cssText = 'position:fixed;bottom:' + (dp ? '120' : '100') + 'px;right:20px;z-index:9999;width:56px;height:56px;border-radius:50%;background:#10b981;color:#fff;border:none;cursor:pointer';
-        btn.innerHTML = '🎙️';
-        btn.onclick = () => this.toggleListening();
-        document.body.appendChild(btn);
+        
+        // Mic Button
+        this.micBtn = document.createElement('button');
+        this.micBtn.id = 'voiceAssistantBtn';
+        this.micBtn.className = this.isListening ? 'va-listening' : 'va-paused';
+        this.micBtn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>';
+        this.micBtn.onclick = () => this.toggleListening();
+        document.body.appendChild(this.micBtn);
 
+        // Language Toggle
+        this.langBtn = document.createElement('button');
+        this.langBtn.id = 'langIndicator';
+        this.langBtn.textContent = (this.activeLang || 'en').toUpperCase();
+        this.langBtn.onclick = () => {
+            const ls = ['en', 'hi', 'te'];
+            this.switchLang(ls[(ls.indexOf(this.activeLang) + 1) % ls.length]);
+        };
+        document.body.appendChild(this.langBtn);
+
+        // Feedback
         this.feedbackEl = document.createElement('div');
         this.feedbackEl.id = 'voiceFeedback';
-        this.feedbackEl.style.cssText = 'position:fixed;bottom:' + (dp ? '120' : '100') + 'px;right:86px;z-index:9998;padding:10px 16px;background:#12121a;color:#fff;border-radius:12px;opacity:0;transition:opacity .3s;pointer-events:none';
         document.body.appendChild(this.feedbackEl);
+
+        // Styles
+        const s = document.createElement('style');
+        s.textContent = `
+            #voiceAssistantBtn {
+                position: fixed; bottom: ${dp ? '120' : '100'}px; right: 20px; z-index: 9999;
+                width: 56px; height: 56px; border-radius: 50%; color: #fff;
+                display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; transition: all .3s;
+            }
+            #voiceAssistantBtn.va-listening {
+                background: linear-gradient(135deg, #10b981, #059669);
+                box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+                animation: vaPulse 2s ease-in-out infinite;
+            }
+            #voiceAssistantBtn.va-paused {
+                background: rgba(100, 116, 139, 0.5);
+                box-shadow: none; animation: none;
+            }
+            @keyframes vaPulse {
+                0%, 100% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.4) }
+                50% { box-shadow: 0 0 35px rgba(16, 185, 129, 0.6), 0 0 70px rgba(16, 185, 129, 0.2) }
+            }
+            #langIndicator {
+                position: fixed; bottom: ${dp ? '185' : '165'}px; right: 28px; z-index: 9999;
+                width: 40px; height: 40px; border-radius: 50%;
+                background: rgba(255, 255, 255, 0.1); color: #a78bfa;
+                display: flex; align-items: center; justify-content: center;
+                border: 1px solid rgba(124, 58, 237, 0.3); cursor: pointer;
+                font-size: .7rem; font-weight: 700; font-family: Inter, sans-serif; backdrop-filter: blur(10px);
+            }
+            #voiceFeedback {
+                position: fixed; bottom: ${dp ? '120' : '100'}px; right: 86px; z-index: 9998;
+                padding: 10px 16px; border-radius: 12px 12px 0 12px;
+                background: rgba(18, 18, 26, 0.95); border: 1px solid rgba(124, 58, 237, 0.3);
+                color: #f1f5f9; font-size: .8rem; max-width: 260px; font-family: Inter, sans-serif;
+                opacity: 0; transition: opacity .3s; pointer-events: none; backdrop-filter: blur(10px);
+            }
+        `;
+        document.head.appendChild(s);
     }
 
     updateFeedback(text) {
@@ -529,7 +537,7 @@ class VoiceAssistant {
         this.feedbackEl.textContent = text;
         this.feedbackEl.style.opacity = '1';
         clearTimeout(this._ft);
-        this._ft = setTimeout(() => { this.feedbackEl.style.opacity = '0'; }, 4000);
+        this._ft = setTimeout(() => { this.feedbackEl.style.opacity = '0'; }, 5000);
     }
 }
 
