@@ -224,9 +224,14 @@ class VoiceAssistant {
                 }
             }
             if (!best) return;
-            // Always allow emergency commands regardless of timing
+            // Always allow emergency commands regardless of timing or buffers
             const isEmergency = this.matchCmd(best) === 'help' || this.matchCmd(best) === 'sendAlert';
-            if (!isEmergency && (Date.now() - this.lastSpeakTime < 2000)) { console.log('[Voice] Ignoring - echo buffer (non-emergency)'); return; }
+            if (isEmergency) {
+                console.log('[Voice] EMERGENCY detected:', best);
+                this.processCommand(best);
+                return;
+            }
+            if (Date.now() - this.lastSpeakTime < 1500) { console.log('[Voice] Ignoring - echo buffer (non-emergency)'); return; }
             console.log('[Voice] Processing:', best);
             this.processCommand(best);
         };
@@ -255,9 +260,13 @@ class VoiceAssistant {
     }
 
     processCommand(t) {
-        if (!window.voiceAssistantActive) return;
-        if (this.isProcessing) return;
-        this.isProcessing = true;
+        const c = t.replace(/\s+/g, ' ').trim();
+        const m = this.matchCmd(c);
+        // Emergency commands bypass the active check entirely
+        if (m !== 'help' && m !== 'sendAlert' && !window.voiceAssistantActive) {
+            console.log('[Voice] Ignoring command - assistant not in active state');
+            return;
+        }
         const r = this.responses[this.activeLang];
         this.updateFeedback('"' + t + '"');
         const c = t.replace(/\s+/g, ' ').trim();
