@@ -20,9 +20,6 @@ class VoiceAssistant {
         this.lastSpeakTime = 0;
         this.utterances = [];
 
-        // ============================
-        // TTS RESPONSES - Native script for proper pronunciation
-        // ============================
         this.responses = {
             en: {
                 greeting: "Hi! I'm your ObstacleAI assistant. Say help for commands.",
@@ -92,9 +89,6 @@ class VoiceAssistant {
             }
         };
 
-        // ============================
-        // COMMAND KEYWORDS - Roman + Native Script for ALL languages
-        // ============================
         this.CMD = {
             help: ['help', 'madad', 'bachao', 'sahayam', 'emergency', 'madat', 'bachav', 'sahayamu', 'helpu',
                 'मदद', 'बचाओ', 'बचाव', 'सहायता',
@@ -129,7 +123,7 @@ class VoiceAssistant {
             goDetect: ['go to detection', 'go detection', 'open detection', 'detection page', 'detect',
                 'detection jao', 'camera page', 'detection ki vellandi',
                 'detection kholo', 'camera kholo', 'डिटेक्शन जाओ',
-                'डिटेक्शन खोलो', 'कैमरा खोलो',
+                'डिटेक्शन खोलो', 'कैమरा खोलो',
                 'డిటెక్షన్ తీయండి', 'కెమెరా తీయండి', 'డిటెక్షన్ కి వెళ్ళండి'],
             goLogin: ['go to login', 'login', 'log in', 'sign in',
                 'लॉगिन', 'లాగిన్'],
@@ -146,7 +140,7 @@ class VoiceAssistant {
                 'हिंदी', 'हिन्दी',
                 'హిందీ'],
             langTe: ['switch to telugu', 'telugu', 'telugu mode', 'telugu mein', 'telugu lo',
-                'तेलुगु',
+                'तेलुగు',
                 'తెలుగు'],
             langEn: ['switch to english', 'english', 'english mode', 'english mein', 'angrezi',
                 'अंग्रेज़ी', 'इंग्लिश',
@@ -179,9 +173,14 @@ class VoiceAssistant {
             }
         };
         if ('speechSynthesis' in window) {
-            const loadVoices = () => { this.voices = window.speechSynthesis.getVoices(); this.updateSelectedVoices(); };
+            const loadVoices = () => { 
+                this.voices = window.speechSynthesis.getVoices(); 
+                this.updateSelectedVoices(); 
+            };
             loadVoices();
-            if (window.speechSynthesis.onvoiceschanged !== undefined) { window.speechSynthesis.onvoiceschanged = loadVoices; }
+            if (window.speechSynthesis.onvoiceschanged !== undefined) { 
+                window.speechSynthesis.onvoiceschanged = loadVoices; 
+            }
         }
         try {
             const status = await navigator.permissions.query({ name: 'microphone' });
@@ -189,8 +188,16 @@ class VoiceAssistant {
         } catch (e) { }
         const trigger = () => {
             navigator.mediaDevices.getUserMedia({ audio: true })
-                .then(stream => { stream.getTracks().forEach(t => t.stop()); const overlay = document.getElementById('va-start-overlay'); if (overlay) overlay.remove(); startAssistant(); })
-                .catch(() => { this.showToast('Mic Blocked: Tap Lock/Aa icon in address bar to allow Microphone!', 'error'); this.updateFeedback('Tap Lock/Aa icon to Allow Mic'); });
+                .then(stream => { 
+                    stream.getTracks().forEach(t => t.stop()); 
+                    const overlay = document.getElementById('va-start-overlay'); 
+                    if (overlay) overlay.remove(); 
+                    startAssistant(); 
+                })
+                .catch(() => { 
+                    this.showToast('Mic Blocked: Tap Lock icon to allow Microphone!', 'error'); 
+                    this.updateFeedback('Tap Lock icon to Allow Mic'); 
+                });
             document.removeEventListener('click', trigger);
             document.removeEventListener('touchstart', trigger);
         };
@@ -211,16 +218,32 @@ class VoiceAssistant {
         this.recognition.interimResults = false;
         this.recognition.lang = this.languages[this.activeLang].code;
         this.recognition.maxAlternatives = 5;
-        this.recognition.onstart = () => { console.log('[Voice] Recognition started in', this.recognition.lang); this.updateFeedback(this.responses[this.activeLang].listening); };
+
+        this.recognition.onstart = () => { 
+            console.log('[Voice] Recognition started'); 
+            this.updateFeedback(this.responses[this.activeLang].listening); 
+        };
+
+        this.recognition.onresult = (e) => {
+            let best = '';
+            for (let i = e.resultIndex; i < e.results.length; i++) {
+                if (e.results[i].isFinal) {
+                    for (let j = 0; j < e.results[i].length; j++) {
+                        const a = e.results[i][j].transcript.trim().toLowerCase();
+                        if (a.length > best.length) best = a;
+                    }
+                }
+            }
             if (!best) return;
-            // Always allow emergency commands regardless of timing or buffers
-            const isEmergency = this.matchCmd(best) === 'help' || this.matchCmd(best) === 'sendAlert';
-            
-            // If the app is speaking, we usually ignore sounds to avoid self-echo.
-            // BUT we should NEVER ignore "Help" or "Emergency".
-            if (!isEmergency && (window._ttsActive || this.isSpeaking || window.speechSynthesis.speaking)) { 
-                console.log('[Voice] Ignoring - TTS active (non-emergency)'); 
-                return; 
+
+            // EMERGENCY CHECK: Priority #1
+            const m = this.matchCmd(best);
+            const isEmergency = m === 'help' || m === 'sendAlert';
+
+            // If speaking, ignore non-emergency sounds
+            if (!isEmergency && (window._ttsActive || this.isSpeaking || window.speechSynthesis.speaking)) {
+                console.log('[Voice] Ignoring - TTS active');
+                return;
             }
 
             if (isEmergency) {
@@ -228,23 +251,34 @@ class VoiceAssistant {
                 this.processCommand(best);
                 return;
             }
+
+            // Normal echo buffer
+            if (Date.now() - this.lastSpeakTime < 1000) return;
             
-            if (Date.now() - this.lastSpeakTime < 1000) { console.log('[Voice] Ignoring - echo buffer (non-emergency)'); return; }
-            console.log('[Voice] Processing:', best);
+            console.log('[Voice] Processing command:', best);
             this.processCommand(best);
-        this.recognition.onend = () => {
-            if (this.isListening) { setTimeout(() => { if (this.isListening && !window._ttsActive && !window.speechSynthesis.speaking) { try { this.recognition.start(); } catch (e) { } } }, 500); }
         };
+
+        this.recognition.onend = () => {
+            if (this.isListening) { 
+                setTimeout(() => { 
+                    if (this.isListening && !window._ttsActive && !window.speechSynthesis.speaking) { 
+                        try { this.recognition.start(); } catch (e) { } 
+                    } 
+                }, 400); 
+            }
+        };
+
         this.recognition.onerror = (e) => {
-            if (e.error === 'not-allowed') { this.updateFeedback('Mic Blocked: Check browser settings'); }
-            if (['no-speech', 'aborted', 'network', 'audio-capture'].includes(e.error) && this.isListening) {
-                setTimeout(() => { if (this.isListening && !window._ttsActive && !window.speechSynthesis.speaking) { try { this.recognition.start(); } catch (e) { } } }, 1200);
+            if (e.error === 'not-allowed') this.updateFeedback('Mic Blocked');
+            if (this.isListening) {
+                setTimeout(() => { if (this.isListening) try { this.recognition.start(); } catch (e) { } }, 1000);
             }
         };
     }
 
-    // Match command from transcript - checks Roman + Native script keywords
     matchCmd(transcript) {
+        if (!transcript) return null;
         for (const [cmd, keywords] of Object.entries(this.CMD)) {
             for (const kw of keywords) {
                 if (transcript.includes(kw)) return cmd;
@@ -259,18 +293,23 @@ class VoiceAssistant {
     processCommand(t) {
         const c = t.replace(/\s+/g, ' ').trim();
         const m = this.matchCmd(c);
-        // Emergency commands bypass the active check entirely
+        
+        // Emergency bypass active check
         if (m !== 'help' && m !== 'sendAlert' && !window.voiceAssistantActive) {
-            console.log('[Voice] Ignoring command - assistant not in active state');
             return;
         }
+
         const r = this.responses[this.activeLang];
         this.updateFeedback('"' + t + '"');
 
         switch (m) {
             case 'help':
-                if (window.location.pathname.includes('detect')) { this.speak(r.helpTriggered); this.triggerAlert(); }
-                else { this.speak(r.commands); }
+                if (window.location.pathname.includes('detect')) { 
+                    this.speak(r.helpTriggered); 
+                    this.triggerAlert(); 
+                } else { 
+                    this.speak(r.commands); 
+                }
                 break;
             case 'startCam': this.exec('start'); this.speak(r.cameraStarted); break;
             case 'stopCam': this.exec('stop'); this.speak(r.cameraStopped); break;
@@ -287,15 +326,14 @@ class VoiceAssistant {
             case 'langTe': this.switchLang('te'); break;
             case 'langEn': this.switchLang('en'); break;
             case 'greet': this.speak(r.greeting); break;
-            default: this.speak(r.notUnderstood);
+            default: if (m) this.speak(r.notUnderstood);
         }
-        this.isProcessing = false;
     }
 
     sim(a, b) {
+        if (!a || !b) return false;
         if (a === b) return true;
         if (Math.abs(a.length - b.length) > 2) return false;
-        if (a.length < 3) return a === b;
         if (a.includes(b) || b.includes(a)) return true;
         let d = 0; const m = Math.max(a.length, b.length);
         for (let i = 0; i < m; i++) if (a[i] !== b[i]) d++;
@@ -308,8 +346,8 @@ class VoiceAssistant {
             case 'start': if (!window.detector.isRunning) window.detector.toggleDetection(); break;
             case 'stop': if (window.detector.isRunning) window.detector.toggleDetection(); break;
             case 'flip': window.detector.switchCamera(); break;
-            case 'soundOn': window.detector.speechEnabled = true; document.getElementById('toggleSoundBtn')?.classList.add('active'); break;
-            case 'soundOff': window.detector.speechEnabled = false; document.getElementById('toggleSoundBtn')?.classList.remove('active'); break;
+            case 'soundOn': window.detector.speechEnabled = true; break;
+            case 'soundOff': window.detector.speechEnabled = false; break;
         }
     }
 
@@ -317,31 +355,41 @@ class VoiceAssistant {
         const user = JSON.parse(localStorage.getItem('obstacleai_user') || '{}');
         const contacts = JSON.parse(localStorage.getItem('obstacleai_emergency_contacts') || '[]');
         const r = this.responses[this.activeLang];
-        if (contacts.length === 0) { this.speak(r.alertFailed); return; }
+        
+        if (contacts.length === 0) {
+            this.speak(r.alertFailed);
+            return;
+        }
+
         const obj = window.detector?._lastLogObjects || 'obstacles';
         const msg = 'EMERGENCY: ' + (user.name || 'User') + ' needs help! Detected: ' + obj;
+        
         this.flashAlert();
-        let sent = 0, failed = 0;
-
-        // Use sequential sending with a delay to avoid Fast2SMS silent failures
+        
         (async () => {
+            let sent = 0;
             for (const c of contacts) {
                 try {
                     const res = await fetch('/api/alert', {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ userEmail: user.email || 'unknown', phone: c.phone, contactName: c.name, detectedObjects: obj, timestamp: new Date().toISOString(), message: msg })
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            userEmail: user.email || 'unknown', 
+                            phone: c.phone, 
+                            contactName: c.name, 
+                            detectedObjects: obj, 
+                            message: msg 
+                        })
                     });
-                    if (res.ok) { sent++; } else { failed++; }
-                } catch (e) { failed++; }
-                // 1.5 second delay between multiple alerts
-                if (contacts.length > 1) await new Promise(r => setTimeout(r, 1500));
+                    if (res.ok) sent++;
+                } catch (e) { }
+                if (contacts.length > 1) await new Promise(r => setTimeout(r, 1200));
             }
-
             if (sent > 0) {
                 this.speak(this.responses[this.activeLang].alertSent);
-                this.showToast('SMS sent to ' + sent + ' contact(s)!', 'success');
+                this.showToast('SMS sent to ' + sent + ' contacts!', 'success');
             } else {
-                this.speak('Alert failed. Check Fast2SMS setup.');
+                this.speak('Alert failed to send.');
             }
         })();
     }
@@ -350,7 +398,12 @@ class VoiceAssistant {
         const o = document.createElement('div');
         o.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;pointer-events:none;animation:af .4s ease 4';
         document.body.appendChild(o);
-        if (!document.getElementById('afs')) { const s = document.createElement('style'); s.id = 'afs'; s.textContent = '@keyframes af{0%,100%{background:transparent}50%{background:rgba(239,68,68,0.25)}}'; document.head.appendChild(s); }
+        if (!document.getElementById('afs')) {
+            const s = document.createElement('style');
+            s.id = 'afs';
+            s.textContent = '@keyframes af{0%,100%{background:transparent}50%{background:rgba(239,68,68,0.25)}}';
+            document.head.appendChild(s);
+        }
         setTimeout(() => o.remove(), 2000);
     }
 
@@ -362,11 +415,9 @@ class VoiceAssistant {
         if (this.recognition) {
             this.recognition.lang = li.code;
             try { this.recognition.stop(); } catch (e) { }
-            if (this.isListening) { setTimeout(() => { try { this.recognition.start(); } catch (e) { } }, 500); }
+            if (this.isListening) setTimeout(() => { try { this.recognition.start(); } catch (e) { } }, 500);
         }
         this.speak(this.responses[lang].langSwitch + li.name);
-        const el = document.getElementById('langIndicator');
-        if (el) el.textContent = lang.toUpperCase();
     }
 
     updateSelectedVoices() {
@@ -382,25 +433,26 @@ class VoiceAssistant {
             }
             if (matches.length > 0) this.selectedVoices[code] = matches[0];
         });
-        console.log('[Voice] Selected voices:', this.selectedVoices);
     }
 
     speak(text, callback) {
         if (!('speechSynthesis' in window)) { if (callback) callback(); return; }
         window.speechSynthesis.cancel();
-        this.isSpeaking = true; window._ttsActive = true; window.voiceAssistantActive = false;
-        // removed recognition.abort() to keep mic alive for emergency commands
+        
+        this.isSpeaking = true;
+        window._ttsActive = true;
+        window.voiceAssistantActive = false;
 
         const u = new SpeechSynthesisUtterance(text);
-        this.utterances.push(u); if (this.utterances.length > 5) this.utterances.shift();
         u.lang = this.currentLang;
-        if (this.selectedVoices[this.currentLang]) { u.voice = this.selectedVoices[this.currentLang]; }
-        u.rate = 0.95; u.pitch = 1; u.volume = 1;
-
+        if (this.selectedVoices[this.currentLang]) u.voice = this.selectedVoices[this.currentLang];
+        u.rate = 1.0;
+        
         let handled = false;
         const done = () => {
             if (handled) return; handled = true;
-            this.isSpeaking = false; this.lastSpeakTime = Date.now();
+            this.isSpeaking = false;
+            this.lastSpeakTime = Date.now();
             if (callback) { callback(); return; }
             setTimeout(() => {
                 window._ttsActive = false;
@@ -408,66 +460,76 @@ class VoiceAssistant {
                     window.voiceAssistantActive = true;
                     try { this.recognition.start(); } catch (e) { }
                 }
-            }, 600); // Reduced delay from 1200ms
+            }, 600);
         };
+
         u.onend = done;
-        u.onerror = (e) => { console.error('[Voice] Speak Error:', e); done(); };
-        if (callback) { setTimeout(() => { if (!handled) done(); }, 3000); }
+        u.onerror = (e) => { console.error('[Voice] Error:', e); done(); };
         window.speechSynthesis.speak(u);
         this.updateFeedback(text);
     }
 
     speakDetection(text) {
-        if (this.isSpeaking || window.speechSynthesis.speaking || window._ttsActive) { return; }
+        if (this.isSpeaking || window.speechSynthesis.speaking || window._ttsActive) return;
         this.speak(text);
     }
 
     startListening() {
-        this.isListening = true; localStorage.setItem('obstacleai_listening', 'true');
+        this.isListening = true;
+        localStorage.setItem('obstacleai_listening', 'true');
         window.voiceAssistantActive = true;
-        if (this.recognition) { try { this.recognition.start(); } catch (e) { } }
+        if (this.recognition) try { this.recognition.start(); } catch (e) { }
         this.updateFeedback(this.responses[this.activeLang].listening);
-        const b = document.getElementById('voiceAssistantBtn'); if (b) b.className = 'va-listening';
     }
 
     stopListening() {
-        this.isListening = false; localStorage.setItem('obstacleai_listening', 'false');
+        this.isListening = false;
+        localStorage.setItem('obstacleai_listening', 'false');
         window.voiceAssistantActive = false;
         if (this.recognition) try { this.recognition.stop(); } catch (e) { }
-        const b = document.getElementById('voiceAssistantBtn'); if (b) b.className = 'va-paused';
-        this.updateFeedback('Paused. Tap mic to resume.');
     }
 
-    toggleListening() { if (this.isListening) this.stopListening(); else this.startListening(); }
+    toggleListening() {
+        if (this.isListening) this.stopListening();
+        else this.startListening();
+    }
 
     showToast(msg, type = 'info') {
         let c = document.querySelector('.toast-container');
-        if (!c) { c = document.createElement('div'); c.className = 'toast-container'; c.style.cssText = 'position:fixed;top:20px;right:20px;z-index:99999;display:flex;flex-direction:column;gap:8px'; document.body.appendChild(c); }
+        if (!c) {
+            c = document.createElement('div');
+            c.className = 'toast-container';
+            c.style.cssText = 'position:fixed;top:20px;right:20px;z-index:99999;display:flex;flex-direction:column;gap:8px';
+            document.body.appendChild(c);
+        }
         const t = document.createElement('div');
-        const bc = type === 'success' ? 'rgba(16,185,129,0.4)' : type === 'error' ? 'rgba(239,68,68,0.4)' : 'rgba(124,58,237,0.4)';
-        t.style.cssText = 'padding:12px 20px;border-radius:12px;background:rgba(18,18,26,0.95);border:1px solid ' + bc + ';color:#f1f5f9;font-size:.85rem;font-weight:500;font-family:Inter,sans-serif;backdrop-filter:blur(10px);max-width:300px';
-        t.textContent = msg; c.appendChild(t);
-        setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 4000);
+        t.style.cssText = 'padding:12px 20px;border-radius:12px;background:rgba(18,18,26,0.95);color:#fff;font-size:.85rem;backdrop-filter:blur(10px)';
+        t.textContent = msg;
+        c.appendChild(t);
+        setTimeout(() => t.remove(), 4000);
     }
 
     createUI() {
         const dp = document.body.classList.contains('detect-page');
-        const btn = document.createElement('button'); btn.id = 'voiceAssistantBtn'; btn.className = 'va-listening';
-        btn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>';
-        btn.addEventListener('click', () => this.toggleListening()); document.body.appendChild(btn);
-        const lb = document.createElement('button'); lb.id = 'langIndicator'; lb.textContent = (this.activeLang || 'en').toUpperCase();
-        lb.addEventListener('click', () => { const ls = ['en', 'hi', 'te']; this.switchLang(ls[(ls.indexOf(this.activeLang) + 1) % ls.length]); });
-        document.body.appendChild(lb);
-        this.feedbackEl = document.createElement('div'); this.feedbackEl.id = 'voiceFeedback'; document.body.appendChild(this.feedbackEl);
-        const s = document.createElement('style');
-        s.textContent = '#voiceAssistantBtn{position:fixed;bottom:' + (dp ? '120' : '100') + 'px;right:20px;z-index:9999;width:56px;height:56px;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;transition:all .3s}#voiceAssistantBtn.va-listening{background:linear-gradient(135deg,#10b981,#059669);box-shadow:0 0 20px rgba(16,185,129,0.4);animation:vaPulse 2s ease-in-out infinite}#voiceAssistantBtn.va-paused{background:rgba(100,116,139,0.5);box-shadow:none;animation:none}@keyframes vaPulse{0%,100%{box-shadow:0 0 20px rgba(16,185,129,0.4)}50%{box-shadow:0 0 35px rgba(16,185,129,0.6),0 0 70px rgba(16,185,129,0.2)}}#langIndicator{position:fixed;bottom:' + (dp ? '185' : '165') + 'px;right:28px;z-index:9999;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.1);color:#a78bfa;display:flex;align-items:center;justify-content:center;border:1px solid rgba(124,58,237,0.3);cursor:pointer;font-size:.7rem;font-weight:700;font-family:Inter,sans-serif;backdrop-filter:blur(10px)}#voiceFeedback{position:fixed;bottom:' + (dp ? '120' : '100') + 'px;right:86px;z-index:9998;padding:10px 16px;border-radius:12px 12px 0 12px;background:rgba(18,18,26,0.95);border:1px solid rgba(124,58,237,0.3);color:#f1f5f9;font-size:.8rem;max-width:260px;font-family:Inter,sans-serif;opacity:0;transition:opacity .3s;pointer-events:none;backdrop-filter:blur(10px)}';
-        document.head.appendChild(s);
+        const btn = document.createElement('button');
+        btn.id = 'voiceAssistantBtn';
+        btn.style.cssText = 'position:fixed;bottom:' + (dp ? '120' : '100') + 'px;right:20px;z-index:9999;width:56px;height:56px;border-radius:50%;background:#10b981;color:#fff;border:none;cursor:pointer';
+        btn.innerHTML = '🎙️';
+        btn.onclick = () => this.toggleListening();
+        document.body.appendChild(btn);
+
+        this.feedbackEl = document.createElement('div');
+        this.feedbackEl.id = 'voiceFeedback';
+        this.feedbackEl.style.cssText = 'position:fixed;bottom:' + (dp ? '120' : '100') + 'px;right:86px;z-index:9998;padding:10px 16px;background:#12121a;color:#fff;border-radius:12px;opacity:0;transition:opacity .3s;pointer-events:none';
+        document.body.appendChild(this.feedbackEl);
     }
 
     updateFeedback(text) {
         if (!this.feedbackEl) return;
-        this.feedbackEl.textContent = text; this.feedbackEl.style.opacity = '1';
-        clearTimeout(this._ft); this._ft = setTimeout(() => { this.feedbackEl.style.opacity = '0'; }, 5000);
+        this.feedbackEl.textContent = text;
+        this.feedbackEl.style.opacity = '1';
+        clearTimeout(this._ft);
+        this._ft = setTimeout(() => { this.feedbackEl.style.opacity = '0'; }, 4000);
     }
 }
 
@@ -475,6 +537,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const delay = window.location.pathname.includes('detect') ? 500 : 2000;
     setTimeout(() => {
         window.voiceAssistant = new VoiceAssistant();
-        window.triggerEmergencyAlert = (obj) => { if (window.voiceAssistant) { window.voiceAssistant.triggerAlert(); } };
+        window.triggerEmergencyAlert = (obj) => { if (window.voiceAssistant) window.voiceAssistant.triggerAlert(); };
     }, delay);
 });
