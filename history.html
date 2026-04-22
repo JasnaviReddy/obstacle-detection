@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+    <title>ObstacleAI - Detection History</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .history-container {
+            max-width: 800px;
+            margin: 100px auto;
+            padding: 20px;
+            position: relative;
+            z-index: 1
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px
+        }
+
+        .history-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.5rem;
+            font-weight: 800
+        }
+
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px
+        }
+
+        .history-card {
+            padding: 20px;
+            border-radius: 16px;
+            background: rgba(18, 18, 26, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(20px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: transform 0.2s
+        }
+
+        .history-card:hover {
+            transform: scale(1.01);
+            border-color: rgba(124, 58, 237, 0.3)
+        }
+
+        .history-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px
+        }
+
+        .history-objects {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--text-primary)
+        }
+
+        .history-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.8rem;
+            color: var(--text-secondary)
+        }
+
+        .history-time {
+            font-family: var(--font-mono);
+            background: rgba(255, 255, 255, 0.05);
+            padding: 2px 8px;
+            border-radius: 4px
+        }
+
+        .status-badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em
+        }
+
+        .badge-moving { background: rgba(6, 182, 212, 0.15); color: var(--cyan); border: 1px solid rgba(6, 182, 212, 0.2) }
+        .badge-stationary { background: rgba(100, 116, 139, 0.15); color: var(--text-secondary); border: 1px solid rgba(100, 116, 139, 0.2) }
+        .badge-high-risk { background: rgba(239, 68, 68, 0.15); color: var(--red); border: 1px solid rgba(239, 68, 68, 0.2); animation: pulse-red 2s infinite }
+
+        @keyframes pulse-red {
+            0%, 100% { opacity: 1 }
+            50% { opacity: 0.7 }
+        }
+
+        .empty-history {
+            text-align: center;
+            padding: 60px;
+            background: var(--glass);
+            border-radius: 20px;
+            border: 1px dashed var(--glass-border);
+            color: var(--text-muted)
+        }
+    </style>
+</head>
+
+<body class="auth-page">
+    <div class="bg-gradient-animation"></div>
+    <div class="grid-overlay"></div>
+    
+    <div class="history-container">
+        <a href="index.html" class="auth-back"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7" /></svg> Back to Home</a>
+        
+        <div class="history-header">
+            <div class="history-title">
+                <span style="font-size: 2rem">📜</span>
+                <h2>Detection History</h2>
+            </div>
+            <button class="btn btn-ghost btn-sm" id="clearBtn">Clear All</button>
+        </div>
+
+        <div class="history-list" id="historyList">
+            <!-- Loaded via JS -->
+            <div class="empty-history">
+                <p>No detection history found. Start detecting to build your log.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            renderHistory();
+            document.getElementById('clearBtn').addEventListener('click', () => {
+                if (confirm('Are you sure you want to clear all history?')) {
+                    localStorage.removeItem('obstacleai_history');
+                    renderHistory();
+                }
+            });
+        });
+
+        function renderHistory() {
+            const history = JSON.parse(localStorage.getItem('obstacleai_history') || '[]');
+            const container = document.getElementById('historyList');
+            
+            if (history.length === 0) {
+                container.innerHTML = '<div class="empty-history"><p>No detection history found.</p></div>';
+                return;
+            }
+
+            container.innerHTML = history.map(item => `
+                <div class="history-card">
+                    <div class="history-info">
+                        <div class="history-objects" style="${item.riskLevel === 'High' ? 'color:var(--red)' : ''}">
+                            Detected: ${item.objects}
+                        </div>
+                        <div class="history-meta">
+                            <span class="history-time">${item.displayTime}</span>
+                            <span>Confidence: ${item.confidence}%</span>
+                            <span class="status-badge ${item.isMoving ? 'badge-moving' : 'badge-stationary'}">${item.isMoving ? 'Moving' : 'Idle'}</span>
+                            ${item.riskLevel === 'High' ? '<span class="status-badge badge-high-risk">High Risk</span>' : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+    </script>
+    <script src="js/auth.js"></script>
+</body>
+
+</html>

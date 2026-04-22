@@ -1479,3 +1479,15 @@ textarea {
     justify-content: flex-end;
     margin-bottom: 16px
 }
+
+/* Risk Assessment Styles */
+.risk-high-log {
+    background: rgba(239, 68, 68, 0.08) !important;
+    border-left: 4px solid var(--red) !important;
+    animation: riskFlash 2s infinite alternate;
+}
+
+@keyframes riskFlash {
+    0% { border-left-color: var(--red); }
+    100% { border-left-color: #991b1b; }
+}

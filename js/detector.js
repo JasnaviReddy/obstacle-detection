@@ -9,6 +9,7 @@ class ObstacleDetector {
         this.lastSpoken = {}; this.speechCooldown = 8000;
         this.frameCount = 0; this.lastFpsTime = performance.now(); this.currentFps = 0;
         this.maxLogEntries = 50; this._lastLogObjects = '';
+        this.prevPredictions = []; this.movementThreshold = 15;
         this.boxColors = { person: '#ec4899', car: '#f59e0b', truck: '#f59e0b', bus: '#f59e0b', bicycle: '#06b6d4', motorcycle: '#06b6d4', dog: '#10b981', cat: '#10b981', chair: '#8b5cf6', couch: '#8b5cf6', bottle: '#06b6d4', cup: '#06b6d4', laptop: '#a78bfa', cell_phone: '#a78bfa', book: '#f59e0b', backpack: '#10b981', handbag: '#10b981', default: '#7c3aed' };
         this.statusDot = document.querySelector('.status-dot');
         this.statusText = document.querySelector('.status-text');
@@ -113,6 +114,8 @@ class ObstacleDetector {
         try {
             if (this.canvas.width !== this.video.videoWidth && this.video.videoWidth > 0) this.resizeCanvas();
             const predictions = await this.model.detect(this.video, this.maxDetections, this.confidenceThreshold);
+            this.matchPredictions(predictions, this.prevPredictions);
+            this.prevPredictions = JSON.parse(JSON.stringify(predictions));
             this.drawPredictions(predictions);
             this.updateStats(predictions);
             this.processSpeech(predictions);
@@ -141,11 +144,25 @@ class ObstacleDetector {
             this.ctx.beginPath(); this.ctx.moveTo(x + w - cl, y + h); this.ctx.lineTo(x + w, y + h); this.ctx.lineTo(x + w, y + h - cl); this.ctx.stroke();
             const pos = this.getPosition(pred);
             const dist = this.estimateDistance(pred);
-            const label = pred.class + ' ' + conf + '% (' + pos + ', ' + dist + ')';
+            const moveLabel = pred.isMoving ? 'Moving' : 'Idle';
+            const riskLabel = 'Risk: ' + (pred.riskLevel || 'Low');
+            const label = pred.class + ' ' + conf + '% (' + moveLabel + ', ' + riskLabel + ')';
+
             this.ctx.font = '600 13px Inter,sans-serif';
             const tw = this.ctx.measureText(label).width;
             const lh = 22; const ly = y > lh + 4 ? y - lh - 4 : y + 4;
-            this.ctx.fillStyle = color; this.ctx.globalAlpha = 0.85;
+
+            // Draw highlight for high risk
+            if (pred.riskLevel === 'High') {
+                this.ctx.lineWidth = 5;
+                this.ctx.strokeStyle = '#ef4444';
+                this.ctx.globalAlpha = 0.2 + Math.sin(Date.now() / 200) * 0.1; // Pulsing effect
+                this.ctx.strokeRect(x - 4, y - 4, w + 8, h + 8);
+                this.ctx.globalAlpha = 1;
+            }
+
+            this.ctx.fillStyle = pred.riskLevel === 'High' ? '#ef4444' : color;
+            this.ctx.globalAlpha = 0.85;
             this.ctx.beginPath(); this.ctx.roundRect(x, ly, tw + 16, lh, 6); this.ctx.fill();
             this.ctx.globalAlpha = 1;
             this.ctx.fillStyle = '#fff'; this.ctx.fillText(label, x + 8, ly + 16)
@@ -173,6 +190,27 @@ class ObstacleDetector {
         return 'Far'
     }
 
+    matchPredictions(current, previous) {
+        current.forEach(curr => {
+            curr.isMoving = false;
+            curr.riskLevel = 'Low';
+            const matches = previous.filter(p => p.class === curr.class);
+            if (matches.length > 0) {
+                let minDSq = Infinity, bestMatch = null;
+                const currCX = curr.bbox[0] + curr.bbox[2] / 2, currCY = curr.bbox[1] + curr.bbox[3] / 2;
+                matches.forEach(prev => {
+                    const prevCX = prev.bbox[0] + prev.bbox[2] / 2, prevCY = prev.bbox[1] + prev.bbox[3] / 2;
+                    const dSq = Math.pow(currCX - prevCX, 2) + Math.pow(currCY - prevCY, 2);
+                    if (dSq < minDSq) { minDSq = dSq; bestMatch = prev }
+                });
+                if (bestMatch && Math.sqrt(minDSq) > this.movementThreshold) curr.isMoving = true;
+            }
+            const dist = this.estimateDistance(curr);
+            const hazardClasses = ['person', 'car', 'truck', 'bus', 'motorcycle', 'bicycle', 'dog', 'cat'];
+            if (curr.isMoving && hazardClasses.includes(curr.class)) curr.riskLevel = 'High';
+        });
+    }
+
     processSpeech(predictions) {
         if (!this.speechEnabled || predictions.length === 0) return;
 
@@ -192,7 +230,7 @@ class ObstacleDetector {
         for (const [obj, data] of Object.entries(counts)) {
             const pos = this.getPosition(data.pred);
             const dist = this.estimateDistance(data.pred);
-            const stateKey = obj + '-' + dist;
+            const stateKey = obj + '-' + dist + '-' + (data.pred.isMoving ? 'moving' : 'idle') + '-' + data.pred.riskLevel;
 
             if (!this.lastSpoken[obj] || (now - this.lastSpoken[obj]) > this.speechCooldown || this.lastSpoken[obj + '_state'] !== stateKey) {
                 const langData = window.voiceAssistant ? window.voiceAssistant.responses[window.voiceAssistant.activeLang] : null;
@@ -201,12 +239,17 @@ class ObstacleDetector {
                 const objLabel = getLabel(obj, obj);
                 const posLabel = getLabel(pos === 'Left' ? 'onLeft' : pos === 'Right' ? 'onRight' : 'atCenter', pos.toLowerCase());
                 const distLabel = getLabel(dist === 'Very Close' ? 'veryClose' : dist === 'Close' ? 'close' : dist === 'Medium' ? 'medium' : 'far', dist.toLowerCase());
+                const riskLabel = data.pred.riskLevel === 'High' ? getLabel('riskHigh', 'high risk') : '';
+                const moveLabel = data.pred.isMoving ? getLabel('moving', 'moving') : '';
 
-                const plural = data.count > 1 ? data.count + ' ' + objLabel : objLabel;
+                let msg = data.count > 1 ? data.count + ' ' + objLabel : objLabel;
+                if (moveLabel) msg = moveLabel + ' ' + msg;
+                if (riskLabel) msg += ', ' + riskLabel;
+
                 if (dist === 'Very Close' || dist === 'Close') {
-                    parts.push(plural + ' ' + distLabel + ' ' + posLabel);
+                    parts.push(msg + ' ' + distLabel + ' ' + posLabel);
                 } else {
-                    parts.push(plural + ' ' + posLabel);
+                    parts.push(msg + ' ' + posLabel);
                 }
                 this.lastSpoken[obj] = now;
                 this.lastSpoken[obj + '_state'] = stateKey;
@@ -236,20 +279,41 @@ class ObstacleDetector {
         const empty = this.detectionLog.querySelector('.log-empty');
         if (empty) empty.remove();
         const item = document.createElement('div');
-        item.className = 'log-item';
+        const isHighRisk = predictions.some(p => p.riskLevel === 'High');
+        item.className = 'log-item' + (isHighRisk ? ' risk-high-log' : '');
         const topPred = predictions.reduce((prev, current) => (prev.score > current.score) ? prev : current);
-        const color = this.boxColors[topPred.class] || this.boxColors.default;
+        const color = isHighRisk ? '#ef4444' : (this.boxColors[topPred.class] || this.boxColors.default);
         item.innerHTML = `
         <div class="log-time">${now}</div>
         <div class="log-content">
-            <div class="log-title">Detected: <span style="color:${color}">${objects}</span></div>
-            <div class="log-detail">Top confidence: ${Math.round(topPred.score * 100)}%</div>
+            <div class="log-title">Detected: <span style="color:${color};font-weight:700">${objects}${isHighRisk ? ' (HIGH RISK)' : ''}</span></div>
+            <div class="log-detail">Movement: ${topPred.isMoving ? 'Moving' : 'Stationary'} | Confidence: ${Math.round(topPred.score * 100)}%</div>
         </div>
     `;
         this.detectionLog.insertBefore(item, this.detectionLog.firstChild);
+        this.saveToPersistentLog(objects, topPred, isHighRisk);
         while (this.detectionLog.children.length > this.maxLogEntries) {
             this.detectionLog.removeChild(this.detectionLog.lastChild);
         }
+    }
+
+    saveToPersistentLog(objects, topPred, isHighRisk) {
+        try {
+            const history = JSON.parse(localStorage.getItem('obstacleai_history') || '[]');
+            const entry = {
+                id: Date.now(),
+                timestamp: new Date().toISOString(),
+                displayTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                objects,
+                topObject: topPred.class,
+                isMoving: topPred.isMoving,
+                riskLevel: isHighRisk ? 'High' : 'Low',
+                confidence: Math.round(topPred.score * 100)
+            };
+            history.unshift(entry);
+            if (history.length > 200) history.pop();
+            localStorage.setItem('obstacleai_history', JSON.stringify(history));
+        } catch (e) { console.error('History save failed:', e); }
     }
 
     updateStats(predictions) {

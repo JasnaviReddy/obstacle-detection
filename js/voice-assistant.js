@@ -43,7 +43,8 @@ class VoiceAssistant {
                     person: "person", car: "car", dog: "dog", cat: "cat", motorcycle: "motorcycle",
                     bicycle: "bicycle", truck: "truck", bus: "bus", chair: "chair", bottle: "bottle",
                     onLeft: "on your left", onRight: "on your right", atCenter: "in front",
-                    veryClose: "very close", close: "close", medium: "at medium distance", far: "far away"
+                    veryClose: "very close", close: "close", medium: "at medium distance", far: "far away",
+                    moving: "moving", riskHigh: "high risk", riskLow: "low risk"
                 }
             },
             hi: {
@@ -65,7 +66,8 @@ class VoiceAssistant {
                     person: "इंसान", car: "गाड़ी", dog: "कुत्ता", cat: "बिल्ली", motorcycle: "मोटरसाइकिल",
                     bicycle: "साइकिल", truck: "ट्रक", bus: "बस", chair: "कुर्सी", bottle: "बोतल",
                     onLeft: "आपके बाएं", onRight: "आपके दाएं", atCenter: "सामने",
-                    veryClose: "बहुत पास", close: "पास", medium: "मध्यम दूरी पर", far: "दूर"
+                    veryClose: "बहुत पास", close: "पास", medium: "मध्यम दूरी पर", far: "दूर",
+                    moving: "चल रहा है", riskHigh: "उच्च जोखिम", riskLow: "कम जोखिम"
                 }
             },
             te: {
@@ -87,7 +89,8 @@ class VoiceAssistant {
                     person: "వ్యక్తి", car: "కారు", dog: "కుక్క", cat: "పిల్లి", motorcycle: "మోటార్ సైకిల్",
                     bicycle: "సైకిల్", truck: "ట్రక్కు", bus: "బస్సు", chair: "కుర్చీ", bottle: "సీసా",
                     onLeft: "మీ ఎడమ వైపు", onRight: "మీ కుడి వైపు", atCenter: "ముందు",
-                    veryClose: "చాలా దగ్గర", close: "దగ్గర", medium: "మధ్యస్థంగా", far: "దూరంగా"
+                    veryClose: "చాలా దగ్గర", close: "దగ్గర", medium: "మధ్యస్థంగా", far: "దూరంగా",
+                    moving: "కదులుతోంది", riskHigh: "అధిక ప్రమాదం", riskLow: "తక్కువ ప్రమాదం"
                 }
             }
         };
@@ -224,10 +227,11 @@ class VoiceAssistant {
                 }
             }
             if (!best) return;
+            console.log('[Voice] Heard:', best);
             const m = this.matchCmd(best);
             const isEmergency = m === 'help' || m === 'sendAlert';
-            if (!isEmergency && (Date.now() - this.lastSpeakTime < 4000)) { console.log('[Voice] Ignoring - echo buffer'); return; }
-            console.log('[Voice] Processing:', best);
+            if (!isEmergency && (Date.now() - this.lastSpeakTime < 1500)) { console.log('[Voice] Ignoring - echo buffer (recently spoke)'); return; }
+            console.log('[Voice] Processing command:', m || 'None matched');
             this.processCommand(best);
         };
         this.recognition.onend = () => {
@@ -242,11 +246,37 @@ class VoiceAssistant {
     }
 
     // Match command from transcript - checks Roman + Native script keywords
+    // Enhanced: prioritize 'help' command, tolerate slow/fragmented speech
     matchCmd(transcript) {
+        // Always check for 'help' command first, even if fragmented
+        const helpKeywords = this.CMD.help;
+        const words = transcript.split(/\s+/);
+        for (const kw of helpKeywords) {
+            // Direct match
+            if (transcript.includes(kw)) return 'help';
+            // Fragmented/slow speech: all letters in order
+            const kwChars = kw.replace(/\s+/g, '').split('');
+            let idx = 0;
+            for (const ch of transcript.replace(/\s+/g, '')) {
+                if (ch === kwChars[idx]) idx++;
+                if (idx === kwChars.length) break;
+            }
+            if (idx === kwChars.length) return 'help';
+            // Slow speech: all words present in order (with gaps)
+            const kwWords = kw.split(' ');
+            let wIdx = 0;
+            for (const w of words) {
+                if (this.sim(w, kwWords[wIdx])) wIdx++;
+                if (wIdx === kwWords.length) break;
+            }
+            if (wIdx === kwWords.length) return 'help';
+        }
+        // Fallback: normal matching for other commands
         for (const [cmd, keywords] of Object.entries(this.CMD)) {
+            if (cmd === 'help') continue;
             for (const kw of keywords) {
                 if (transcript.includes(kw)) return cmd;
-                const tw = transcript.split(' '), ks = kw.split(' ');
+                const tw = words, ks = kw.split(' ');
                 if (ks.length > 1 && ks.every(k => tw.some(t => t === k || this.sim(t, k)))) return cmd;
                 if (ks.length === 1 && tw.some(t => this.sim(t, kw))) return cmd;
             }
@@ -259,6 +289,7 @@ class VoiceAssistant {
         const m = this.matchCmd(c);
         const isEmergency = m === 'help' || m === 'sendAlert';
 
+        // Always process 'help' command immediately, even if assistant is not active
         if (!isEmergency && !window.voiceAssistantActive) return;
         if (this.isProcessing) return;
         this.isProcessing = true;
@@ -268,8 +299,13 @@ class VoiceAssistant {
 
         switch (m) {
             case 'help':
-                if (window.location.pathname.includes('detect')) { this.speak(r.helpTriggered); this.triggerAlert(); }
-                else { this.speak(r.commands); }
+                // On detection screen, always trigger alert and speak help
+                if (window.location.pathname.includes('detect')) {
+                    this.speak(r.helpTriggered);
+                    this.triggerAlert();
+                } else {
+                    this.speak(r.commands);
+                }
                 break;
             case 'startCam': this.exec('start'); this.speak(r.cameraStarted); break;
             case 'stopCam': this.exec('stop'); this.speak(r.cameraStopped); break;
@@ -395,8 +431,9 @@ class VoiceAssistant {
                 if (this.isListening && this.recognition && !window.speechSynthesis.speaking) {
                     window.voiceAssistantActive = true;
                     try { this.recognition.start(); } catch (e) { }
+                    console.log('[Voice] Mic reactivated');
                 }
-            }, 1200);
+            }, 500);
         };
         u.onend = done;
         u.onerror = (e) => { console.error('[Voice] Speak Error:', e); done(); };
